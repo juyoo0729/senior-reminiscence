@@ -1,0 +1,15 @@
+langgraph
+openai
+sentence-transformers
+faiss-cpu
+scikit-learn
+pandas
+numpy
+joblib
+streamlit
+python-dotenv
+transformers
+torch
+datasets
+accelerate
+ragas

@@ -1,0 +1,20 @@
+# 보안: API 키 절대 커밋 금지
+.env
+
+# 대용량 산출물 (실행 시 재생성됨)
+data/*.csv
+data/*.faiss
+data/*.pkl
+data/*.joblib
+data/*.txt
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+data/kobert_5cat/
+
+data/kobert_5cat/
+data/kobert_5cat/
