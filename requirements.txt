@@ -1,4 +1,4 @@
-langgraph
+streamlit
 openai
 sentence-transformers
 faiss-cpu
@@ -6,10 +6,7 @@ scikit-learn
 pandas
 numpy
 joblib
-streamlit
 python-dotenv
 transformers
 torch
-datasets
-accelerate
-ragas
+streamlit-mic-recorder

@@ -1,125 +1,107 @@
-# 🌿 마음 말동무 (Senior AI Companion)
+# 🌿 마음 말동무
 
-홀로 지내는 어르신을 위한 **RAG 기반 AI 말동무**입니다.
-사용자의 발화를 받아 비슷한 처지의 어르신들이 실제로 남긴 구술을 근거로 검색하고,
-그 정서를 바탕으로 따뜻하게 공감하는 응답을 생성합니다.
-
-> AIFFEL DLthon 프로젝트 · 졸업 프로젝트(고립된 사람을 위한 AI 컴패니언) 프로토타입
+홀로 지내는 어르신을 위한 AI 말동무 — 실제 어르신들의 구술 이야기를 근거로 공감하는 RAG 기반 챗봇입니다.
 
 ---
 
-## 핵심 아이디어
+## 주요 기능
 
-단순 감정 분류기는 발화에 감정 단어가 없으면 한계가 있습니다
-(예: "딸이 집을 장만했어요" → 감정 단어 없이 사건만 서술).
-그래서 **의미 기반 검색(RAG)** 으로 비슷한 정서의 실제 구술을 찾아 근거로 삼고,
-LLM이 그 근거 위에서 공감 응답을 생성합니다. → 환각을 줄이고 공감의 구체성을 높임.
+| 기능 | 설명 |
+|------|------|
+| 🎤 음성 입력 | 마이크 녹음 → OpenAI Whisper STT |
+| 🔊 음성 출력 | AI 답변 → OpenAI TTS → 자동 재생 |
+| 🗂️ 감정·주제 분류 | 발화를 5개 카테고리로 분류 (감정긍정 / 감정부정 / 사물 / 장소 / 관계) |
+| 🔍 구술 검색 (RAG) | FAISS 벡터 인덱스에서 유사한 실제 어르신 구술을 검색해 공감 근거로 활용 |
+| 💬 스트리밍 응답 | OpenAI GPT 스트리밍으로 자연스러운 대화 흐름 제공 |
+| 🧠 대화 기억 | 최근 5턴 히스토리를 유지해 문맥에 맞는 응답 생성 |
 
-## 파이프라인
+---
 
-```
-입력(사용자 발화)
-  → ① 분류 (감정/주제 5종)        src/classifier.py
-  → ② 검색 (FAISS 의미 검색)      src/retriever.py
-  → ③ 생성 (근거 기반 공감 응답)   src/generator.py
-  → 출력
-※ ①~③을 LangGraph로 통합          src/pipeline.py
-```
+## 기술 스택
 
-## 폴더 구조
+- **Frontend** : Streamlit + streamlit-mic-recorder
+- **STT** : OpenAI Whisper
+- **TTS** : OpenAI TTS
+- **분류기** : scikit-learn (joblib 저장)
+- **임베딩** : `jhgan/ko-sroberta-multitask`
+- **벡터 DB** : FAISS
+- **LLM** : GPT (gpt-5.5 → gpt-5.4 → gpt-5 순서 자동 폴백)
+- **파이프라인** : LangGraph (분류 → 검색 → 생성)
+- **데이터** : AI허브 '고령자 근현대 경험 기반 스토리 구술 데이터'
+
+---
+
+## 프로젝트 구조
 
 ```
 companion/
-├─ data/                 # csv, FAISS 인덱스, 분류기 (실행 시 생성)
-├─ src/
-│  ├─ config.py          # 경로·모델명·라벨 매핑 등 전역 설정
-│  ├─ classifier.py      # 5종 분류 (KLUE/RoBERTa 우선, 없으면 TF-IDF 폴백)
-│  ├─ retriever.py       # 임베딩 + FAISS 검색
-│  ├─ generator.py       # OpenAI 공감 응답 생성
-│  ├─ pipeline.py        # LangGraph 통합
-│  ├─ evaluate.py        # 자체 지표 + LLM-judge 평가
-│  └─ evaluate_ragas.py  # RAGAS 표준 RAG 평가
-├─ app_companion.py      # Streamlit 웹 UI
-└─ README.md
+├── app_companion.py      # Streamlit UI (음성 입출력 포함)
+├── src/
+│   ├── config.py         # 전역 설정 (경로, 모델명, 하이퍼파라미터)
+│   ├── pipeline.py       # LangGraph 파이프라인 (분류 → 검색 → 생성)
+│   ├── classifier.py     # 5카테고리 분류기
+│   ├── retriever.py      # FAISS 벡터 검색
+│   ├── generator.py      # OpenAI GPT 응답 생성 (스트리밍 포함)
+│   └── voice.py          # STT / TTS 유틸
+├── data/
+│   ├── train_5cat.csv    # 학습 데이터
+│   ├── valid_5cat.csv    # 검증 데이터
+│   ├── clf_5cat.joblib   # 저장된 분류 모델
+│   ├── corpus.faiss      # FAISS 인덱스
+│   └── corpus_meta.pkl   # 코퍼스 메타데이터
+├── requirements.txt
+└── .env                  # OPENAI_API_KEY 설정 (git 제외)
 ```
 
-## 설치
+---
+
+## 시작하기
+
+### 1. 환경 설정
 
 ```bash
-pip install langgraph openai sentence-transformers faiss-cpu \
-            scikit-learn pandas numpy joblib streamlit python-dotenv \
-            transformers torch datasets accelerate ragas
+pip install -r requirements.txt
 ```
 
-API 키는 `companion/.env` 파일에 저장 (깃에 올리지 말 것):
+### 2. API 키 설정
+
+프로젝트 루트에 `.env` 파일을 만들고 아래 내용을 입력하세요.
 
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-## 데이터 준비
-
-`data/` 폴더에 `train_5cat.csv`, `valid_5cat.csv` 를 넣습니다.
-(AI허브 '고령자 근현대 경험 기반 스토리 구술 데이터'의 라벨링 데이터에서
-발화 텍스트 + 5종 대분류로 전처리한 결과)
-
-## 실행
+### 3. 앱 실행
 
 ```bash
 cd companion
-
-# 1) 터미널에서 대화
-python -m src.pipeline
-
-# 2) 웹 UI
 streamlit run app_companion.py
-
-# 3) 평가
-python -m src.evaluate
 ```
-
-> 최초 실행 시 분류기 학습과 임베딩 인덱스 생성이 자동으로 수행됩니다
-> (`data/` 에 결과물 저장, 이후 재사용).
-
-## 평가 지표
-
-| 구분 | 지표 | 설명 |
-|------|------|------|
-| 자체 | emotion_match | 입력 분류 ↔ 검색 구술 감정 일치율 |
-| 자체 | avg_similarity | 평균 검색 유사도 |
-| 자체 | retrieval_consistency | 검색 구술의 대분류 일관성 |
-| LLM | empathy | 공감 정도 (1~5, LLM-as-a-judge) |
-| LLM | faithfulness | 근거 충실성/환각 여부 (1~5) |
-
-### 데이터셋 특성 메모
-라벨(keyword)이 '감정'이 아니라 '이야기 주제'에 가까워,
-emotion_match가 상대적으로 낮게 나오는 경향이 있습니다.
-이는 모델 성능 문제가 아니라 데이터셋의 구조적 특성을 지표가 포착한 것입니다.
-
-## 데이터 출처
-AI허브 「고령자 근현대 경험 기반 스토리 구술 데이터」 (dataSetSn=71703)
-
-## 향후 계획
-- 웹 배포 (Streamlit Community Cloud)
-- 대화 기록 저장 / 안전 응답(위험 발화 감지)
 
 ---
 
-## 업데이트 기록
+## 파이프라인 흐름
 
-### 분류기 업그레이드 (KLUE/RoBERTa)
-TF-IDF baseline 대비 한국어 사전학습 모델 파인튜닝으로 성능 향상.
+```
+사용자 발화 (텍스트 or 음성)
+        ↓
+   [분류기] 5개 카테고리 중 하나로 분류
+        ↓
+   [검색기] FAISS에서 유사 구술 TOP-K 검색
+        ↓
+   [생성기] GPT가 구술을 참고해 공감 응답 생성
+        ↓
+   텍스트 출력 + TTS 음성 재생
+```
 
-| 분류기 | Accuracy | Macro F1 |
-|--------|----------|----------|
-| TF-IDF + LogReg (baseline) | 0.419 | 0.419 |
-| KLUE/RoBERTa (fine-tuned)  | 0.529 | 0.527 |
+---
 
-- 특히 감정부정 F1: 0.411 → 0.528 (+0.117). 감정 단어가 없어도 문맥으로 분류.
-- 학습: `python train_kobert.py` → `companion/data/kobert_5cat/` 저장
-- `src/classifier.py`가 KLUE 모델이 있으면 자동으로 우선 사용 (없으면 TF-IDF 폴백)
+## 카테고리 안내
 
-### RAGAS 평가
-표준 RAG 지표(faithfulness, answer_relevancy, context_precision)로 평가.
-- 실행: `python -m src.evaluate_ragas`
-- 자체 LLM-judge 평가는 `python -m src.evaluate`
+| 카테고리 | 예시 발화 |
+|----------|-----------|
+| 😊 감정긍정 | "손주가 왔다 갔는데 너무 예뻐" |
+| 💙 감정부정 | "밤에 혼자 있으면 쓸쓸해" |
+| 🏠 사물 | "젊었을 때 고향 밥이 제일 맛있었어" |
+| 🗺️ 장소 | "오늘 공원에서 산책했더니 기분이 좋아" |
+| 👥 관계 | "자식들이 바빠서 통 연락이 없네" |

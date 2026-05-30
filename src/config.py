@@ -16,12 +16,13 @@ EMBED_NAME_PATH = os.path.join(DATA_DIR, "embed_model.txt")
 
 # 모델 이름
 EMBED_MODEL = "jhgan/ko-sroberta-multitask"
-CHAT_MODEL = "gpt-4o-mini"
+CHAT_MODEL_PRIORITY = ["gpt-5.5", "gpt-5.4", "gpt-5"]
 
 # 하이퍼파라미터
 TOP_K = 4
 N_CORPUS = 30000
 EMOTION_NEG = "감정부정"
+MAX_HISTORY_TURNS = 5  # OpenAI에 넘길 최대 대화 턴 수 (user+assistant 쌍)
 
 # 50개 키워드 -> 5종 대분류
 CAT_MAP = {

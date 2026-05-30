@@ -1,0 +1,7 @@
+[theme]
+# 따뜻한 크림/테라코타 팔레트
+primaryColor        = "#E8935A"   # 버튼·강조 — 테라코타 오렌지
+backgroundColor     = "#FFFBF4"   # 메인 배경 — 따뜻한 크림
+secondaryBackgroundColor = "#FFF5E6"   # 사이드바·위젯 배경 — 모래 베이지
+textColor           = "#3D2B1F"   # 본문 글씨 — 따뜻한 진한 갈색
+font                = "sans serif"
