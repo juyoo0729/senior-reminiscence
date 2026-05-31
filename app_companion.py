@@ -54,36 +54,43 @@ EXAMPLE_PROMPTS = {
     ],
 }
 
+# ★UI개선: 카테고리 구분 없이 단일 리스트로 펼침 — 첫 화면 버튼에 사용
+FLAT_EXAMPLES = [ex for exs in EXAMPLE_PROMPTS.values() for ex in exs]
+
 # ── 페이지 설정 ────────────────────────────────────────────
 st.set_page_config(page_title="마음 말동무", page_icon="🌿", layout="centered")
 
-# ── 어르신 친화 CSS ────────────────────────────────────────
+# ★UI개선: 모바일 친화 CSS — 글자·여백·터치 영역 전면 개선
 st.markdown("""
 <style>
+/* ── 전체 컨테이너: 모바일 여백 정리 ── */
+.block-container {
+    padding-top: 1.2rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-bottom: 5rem !important;
+    max-width: 680px !important;
+}
+
+/* ── 채팅 말풍선 본문 24px ── */
 [data-testid="stChatMessageContent"] p,
 [data-testid="stChatMessageContent"] {
-    font-size: 20px !important;
-    line-height: 1.9 !important;
+    font-size: 24px !important;
+    line-height: 2.0 !important;
 }
+
+/* ── 일반 본문 20px ── */
 .stMarkdown p, .stMarkdown li {
-    font-size: 18px !important;
-    line-height: 1.8;
+    font-size: 20px !important;
+    line-height: 1.95 !important;
 }
-[data-testid="stSidebar"] .stMarkdown p,
-[data-testid="stSidebar"] .stMarkdown li {
-    font-size: 17px !important;
-}
-[data-testid="stSidebar"] .stCaption p {
-    font-size: 15px !important;
-}
-[data-testid="stExpander"] summary span {
-    font-size: 16px !important;
-}
+
+/* ── 채팅 말풍선 여백·색 ── */
 [data-testid="stChatMessage"] {
-    padding: 18px 22px !important;
+    padding: 20px 22px !important;
     border-radius: 18px !important;
-    margin-bottom: 14px !important;
-    box-shadow: 0 2px 10px rgba(180, 140, 100, 0.12) !important;
+    margin-bottom: 16px !important;
+    box-shadow: 0 2px 10px rgba(160, 120, 80, 0.12) !important;
 }
 [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
     background-color: #FFF0DC !important;
@@ -93,55 +100,111 @@ st.markdown("""
     background-color: #F3F9ED !important;
     border-left: 4px solid #7AB68A !important;
 }
+
+/* ── 예시 버튼: 큰 터치 영역, 따뜻한 베이지 ── */
+[data-testid="baseButton-secondary"] {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    padding: 16px 20px !important;
+    border-radius: 16px !important;
+    background-color: #FEF0DC !important;
+    color: #5C3317 !important;
+    border: 2px solid #D4956A !important;
+    line-height: 1.6 !important;
+    white-space: normal !important;
+    height: auto !important;
+    min-height: 64px !important;
+    margin-bottom: 10px !important;
+    text-align: left !important;
+    width: 100% !important;
+}
+[data-testid="baseButton-secondary"]:hover {
+    background-color: #EDCFAB !important;
+    border-color: #B85C28 !important;
+}
+
+/* ── 참고 이야기 expander ── */
 [data-testid="stExpander"] {
     border-radius: 12px !important;
     border: 1px solid #E8C9A8 !important;
     background-color: #FFFDF8 !important;
     margin-top: 8px !important;
 }
-.stChatInput textarea {
-    font-size: 19px !important;
-    padding: 14px 18px !important;
+[data-testid="stExpander"] summary span {
+    font-size: 17px !important;
+}
+
+/* ★UI개선: st.chat_input 제거 → text_input + form_submit_button으로 교체 */
+
+/* ── 텍스트 입력칸 ── */
+.stTextInput input {
+    font-size: 20px !important;
+    padding: 14px 16px !important;
     border-radius: 14px !important;
-    min-height: 58px !important;
+    min-height: 56px !important;
     border: 2px solid #D4956A !important;
     background-color: #FFFBF4 !important;
     color: #3D2B1F !important;
+    line-height: 1.8 !important;
 }
-.stChatInput textarea:focus {
+.stTextInput input:focus {
     border-color: #C06C34 !important;
-    box-shadow: 0 0 0 3px rgba(212, 149, 106, 0.30) !important;
+    box-shadow: 0 0 0 3px rgba(212, 149, 106, 0.28) !important;
 }
-.stChatInput button {
+
+/* ── 보내기 버튼 (form submit — primary) ── */
+[data-testid="baseButton-primary"] {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
     background-color: #E8935A !important;
-    border-radius: 12px !important;
-    padding: 10px 14px !important;
+    color: white !important;
+    border: none !important;
+    min-height: 60px !important;
+    margin-top: 6px !important;
+    width: 100% !important;
 }
-.stChatInput button:hover {
+[data-testid="baseButton-primary"]:hover {
     background-color: #C06C34 !important;
 }
-[data-testid="baseButton-secondary"] {
-    font-size: 17px !important;
-    padding: 12px !important;
-    border-radius: 12px !important;
-    background-color: #F5E6D3 !important;
-    color: #7B4E2D !important;
-    border: 1.5px solid #D4956A !important;
-    font-weight: 600 !important;
+
+/* form 테두리 제거 */
+[data-testid="stForm"] {
+    border: none !important;
+    padding: 0 !important;
 }
-[data-testid="baseButton-secondary"]:hover {
-    background-color: #E8C9A8 !important;
+
+/* ── 캡션·설명 텍스트 ── */
+.stCaption p, [data-testid="stCaptionContainer"] p {
+    font-size: 16px !important;
+    color: #5C4033 !important;
+}
+
+/* ── 사이드바 ── */
+[data-testid="stSidebar"] .stMarkdown p {
+    font-size: 17px !important;
+}
+[data-testid="stSidebar"] .stCaption p {
+    font-size: 15px !important;
+    color: #5C4033 !important;
+}
+
+/* ── 섹션 제목 여백 ── */
+h4, h5 {
+    margin-top: 24px !important;
+    margin-bottom: 10px !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── 헤더 ──────────────────────────────────────────────────
+# ★UI개선: 헤더 — 부제목 색 진하게(#5C4033), 모바일에서 줄바꿈 허용
 st.markdown(
-    "<h1 style='text-align:center; color:#4a7c59; font-size:2.1rem; margin-bottom:4px;'>"
-    "🌿 마음 말동무</h1>"
-    "<p style='text-align:center; color:#8A7060; font-size:1.05rem; margin-top:0;'>"
-    "홀로 지내는 어르신을 위한 AI 말동무 · 실제 어르신들의 이야기를 근거로 공감합니다"
-    "</p>",
+    "<h1 style='text-align:center; color:#4a7c59; font-size:2.0rem;"
+    " margin-bottom:4px; line-height:1.3;'>🌿 마음 말동무</h1>"
+    "<p style='text-align:center; color:#5C4033; font-size:1.05rem;"
+    " margin-top:0; line-height:1.8;'>"
+    "어르신을 위한 AI 말동무</p>",
     unsafe_allow_html=True,
 )
 st.divider()
@@ -162,9 +225,11 @@ retrieve_fn = load_pipeline()
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": GREETING}]
 
-# ★음성: 같은 녹음을 두 번 처리하지 않도록 마지막 녹음 ID 기억
 if "last_audio_id" not in st.session_state:
     st.session_state.last_audio_id = None
+
+if "prompt_input" not in st.session_state:
+    st.session_state.prompt_input = None
 
 # ── 대화 히스토리 표시 ─────────────────────────────────────
 for msg in st.session_state.messages:
@@ -172,7 +237,7 @@ for msg in st.session_state.messages:
         st.write(msg["content"])
         # ★음성: 저장해둔 답변 음성이 있으면 재생 위젯 표시
         if msg.get("audio"):
-            st.audio(msg["audio"], format="audio/mp3")
+            st.audio(msg["audio"], format="audio/mp3", autoplay=True)
         if msg.get("hits"):
             cat_label = CAT_LABEL.get(msg["category"], msg["category"])
             with st.expander(f"🔎 참고 이야기 ({cat_label})", expanded=False):
@@ -181,23 +246,58 @@ for msg in st.session_state.messages:
                         f"- *(유사도 {h['score']:.3f})* `{h['label']}` {h['text'][:90]}"
                     )
 
-# ── 입력 받기 (음성 + 텍스트) ──────────────────────────────
-# ★음성: 마이크 녹음 버튼. 녹음하면 dict(bytes, id, ...) 반환.
-st.markdown("##### 🎤 말로 하시거나, 아래에 적어주세요")
-audio = mic_recorder(
-    start_prompt="🎤 눌러서 말하기",
-    stop_prompt="⏹️ 멈추기",
-    just_once=True,
-    format="wav",
-    key="mic",
-)
+# ★UI개선: 예시 버튼 — 첫 화면엔 본문에 큰 버튼으로 전부 표시(카테고리 라벨 제거로 간소화)
+#           대화 시작 후엔 작은 접기 패널로 숨겨 화면 정리
+user_has_spoken = any(m["role"] == "user" for m in st.session_state.messages)
 
-# 텍스트 입력 (기존)
-typed_input = st.chat_input("편하게 말씀해 주세요...")
+if not user_has_spoken:
+    st.markdown("#### 💬 이렇게 말씀해 보세요")
+    for ex in FLAT_EXAMPLES:
+        if st.button(ex, key=f"ex_{ex}", use_container_width=True):
+            st.session_state.prompt_input = ex
+    st.divider()
+else:
+    with st.expander("💬 다른 말 걸어보기", expanded=False):
+        for ex in FLAT_EXAMPLES:
+            if st.button(ex, key=f"ex_{ex}", use_container_width=True):
+                st.session_state.prompt_input = ex
+
+# ── 입력 받기 (음성 + 텍스트) ──────────────────────────────
+st.markdown("##### 🎤 말로 하시거나, 아래에 적어주세요")
+# 마이크 버튼 가운데 정렬 — 기존 유지
+_left, _center, _right = st.columns([1, 2, 1])
+with _center:
+    audio = mic_recorder(
+        start_prompt="🎤 눌러서 말하기",
+        stop_prompt="⏹️ 멈추기",
+        just_once=True,
+        format="wav",
+        use_container_width=True,
+        key="mic",
+    )
+    # ★UI개선: st.chat_input(화면 맨 아래 고정) → st.form(마이크 바로 아래 배치)
+    # clear_on_submit=True: 제출 후 입력칸 자동 클리어, Enter키·버튼 모두 제출 처리
+    with st.form(key="text_form", clear_on_submit=True):
+        typed_raw = st.text_input(
+            "직접 입력",
+            placeholder="여기에 적어주세요...",
+            label_visibility="collapsed",
+        )
+        send_clicked = st.form_submit_button(
+            "📤 말 보내기",
+            use_container_width=True,
+            type="primary",
+        )
+
+# ★UI개선: form 제출값을 typed_input으로 추출 (기존 typed_input 변수명 유지)
+typed_input = typed_raw.strip() if send_clicked and typed_raw.strip() else None
 
 # ★음성: 입력 소스 결정 — 녹음이 있으면 STT로 텍스트화, 없으면 타이핑 사용
 user_input = None
-if audio and audio.get("id") != st.session_state.last_audio_id:
+if st.session_state.prompt_input:
+    user_input = st.session_state.prompt_input
+    st.session_state.prompt_input = None
+elif audio and audio.get("id") != st.session_state.last_audio_id:
     st.session_state.last_audio_id = audio["id"]
     with st.spinner("말씀을 듣고 있어요..."):
         try:
@@ -257,26 +357,21 @@ if user_input:
         "hits": result["hits"],
         "audio": audio_bytes,  # ★음성: 다시 그릴 때 재생되도록 저장
     })
+    st.rerun()
 
-# ── 사이드바 ───────────────────────────────────────────────
+# ★UI개선: 사이드바 간소화 — 예시 목록 제거(본문 버튼으로 이동), 초기화·출처만 유지
 with st.sidebar:
-    st.subheader("💬 이렇게 말 걸어보세요")
-    for group, examples in EXAMPLE_PROMPTS.items():
-        st.markdown(f"**{group}**")
-        for ex in examples:
-            st.markdown(f"- {ex}")
-        st.markdown("")
-
     turn_count = sum(1 for m in st.session_state.messages if m["role"] == "user")
     if turn_count:
         remembered = min(turn_count, config.MAX_HISTORY_TURNS)
         st.caption(f"대화 {turn_count}회 · {remembered}턴 기억 중")
+        st.divider()
 
-    st.divider()
-    if st.button("대화 초기화", use_container_width=True):
+    if st.button("🔄 대화 초기화", use_container_width=True):
         st.session_state.messages = [{"role": "assistant", "content": GREETING}]
         st.session_state.last_audio_id = None  # ★음성
+        st.session_state.prompt_input = None
         st.rerun()
 
     st.divider()
-    st.caption("AI허브 '고령자 근현대 경험 기반 스토리 구술 데이터' 기반")
+    st.caption("AI허브 '고령자 근현대 경험 기반\n스토리 구술 데이터' 기반")
