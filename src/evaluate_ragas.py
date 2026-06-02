@@ -5,7 +5,7 @@
 
 필요 패키지:
     pip install ragas datasets
-    $env:OPENAI_API_KEY="sk-..."
+    $env:OPENAI_API_KEY="your_openai_api_key_here"
 
 실행 (companion 폴더에서):
     python -m src.evaluate_ragas

@@ -1,7 +1,13 @@
 .env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
 data/
 __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Local scratch / accidental shell output
 "; print(pandas.__version__)•"

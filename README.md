@@ -1,3 +1,13 @@
+---
+title: Senior Reminiscence
+emoji: 🌿
+colorFrom: green
+colorTo: yellow
+sdk: streamlit
+app_file: app_companion.py
+pinned: false
+---
+
 # 🌿 마음 말동무
 
 홀로 지내는 어르신을 위한 AI 말동무 — 실제 어르신들의 구술 이야기를 근거로 공감하는 RAG 기반 챗봇입니다.
@@ -77,13 +87,13 @@ companion/
 │   ├── place/            # 장소
 │   └── relation/         # 관계
 ├── data/
-│   ├── train_5cat.csv    # 학습 데이터
-│   ├── valid_5cat.csv    # 검증 데이터
 │   ├── clf_5cat.joblib   # 저장된 분류 모델
 │   ├── corpus.faiss      # FAISS 인덱스
-│   └── corpus_meta.pkl   # 코퍼스 메타데이터
+│   ├── corpus_meta.pkl   # 코퍼스 메타데이터
+│   └── embed_model.txt   # 임베딩 모델 이름
+├── .env.example          # 환경변수 템플릿
 ├── requirements.txt
-└── .env                  # OPENAI_API_KEY 설정 (git 제외)
+└── .env                  # OPENAI_API_KEY 설정 (git/업로드 제외)
 ```
 
 ---
@@ -105,7 +115,7 @@ pip install -r requirements.txt
 프로젝트 루트에 `.env` 파일을 만들고 아래 내용을 입력하세요.
 
 ```
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ### 3. 앱 실행
