@@ -9,6 +9,7 @@
 - 입력: 마이크 녹음 → Whisper(STT) → 텍스트
 - 출력: AI 답변 → OpenAI TTS → 음성 재생
 - RAG 본체(분류/검색/생성)는 그대로.
+[스토리북 추가] 변경점은 주석 "# ★스토리북" 으로 표시.
 """
 import os
 import streamlit as st
@@ -23,6 +24,7 @@ from src.pipeline import build_retriever
 from src import generator, config
 from src import voice  # ★음성: STT/TTS 함수
 from streamlit_mic_recorder import mic_recorder  # ★음성: 마이크 녹음 컴포넌트
+from storybook import render_storybook_mode  # ★스토리북: 스토리북 모드 UI
 
 # ── 카테고리 → 이모지/레이블 매핑 ──────────────────────────
 CAT_LABEL = {
@@ -195,6 +197,35 @@ h4, h5 {
     margin-top: 24px !important;
     margin-bottom: 10px !important;
 }
+
+/* ── 모드 선택 버튼: 크고 명확하게 ── */
+.mode-btn button {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    min-height: 90px !important;
+    padding: 22px 16px !important;
+    border-radius: 20px !important;
+    white-space: normal !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+}
+.mode-btn-active button {
+    background-color: #4a7c59 !important;
+    color: white !important;
+    border: 3px solid #2d5c3e !important;
+    box-shadow: 0 4px 14px rgba(74, 124, 89, 0.35) !important;
+}
+.mode-btn-inactive button {
+    background-color: #F3F9ED !important;
+    color: #2d5c3e !important;
+    border: 3px solid #7AB68A !important;
+}
+.mode-btn-inactive button:hover {
+    background-color: #D9EFE0 !important;
+    border-color: #4a7c59 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -222,6 +253,9 @@ def load_pipeline():
 retrieve_fn = load_pipeline()
 
 # ── 세션 초기화 ────────────────────────────────────────────
+if "app_mode" not in st.session_state:
+    st.session_state.app_mode = "chat"
+
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": GREETING}]
 
@@ -231,133 +265,171 @@ if "last_audio_id" not in st.session_state:
 if "prompt_input" not in st.session_state:
     st.session_state.prompt_input = None
 
-# ── 대화 히스토리 표시 ─────────────────────────────────────
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-        # ★음성: 저장해둔 답변 음성이 있으면 재생 위젯 표시
-        if msg.get("audio"):
-            st.audio(msg["audio"], format="audio/mp3", autoplay=True)
-        if msg.get("hits"):
-            cat_label = CAT_LABEL.get(msg["category"], msg["category"])
+# ★스토리북: 마지막 분류 카테고리 — 스토리북 이미지 매칭에 사용
+if "last_category" not in st.session_state:
+    st.session_state.last_category = "감정긍정"
+
+# ★음성: 이미 자동재생한 메시지 인덱스 (합창 방지)
+if "played_audio_indices" not in st.session_state:
+    st.session_state.played_audio_indices = set()
+
+# ── 모드 선택 버튼 ─────────────────────────────────────────
+mcol1, mcol2 = st.columns(2, gap="small")
+with mcol1:
+    chat_cls = "mode-btn mode-btn-active" if st.session_state.app_mode == "chat" else "mode-btn mode-btn-inactive"
+    st.markdown(f'<div class="{chat_cls}">', unsafe_allow_html=True)
+    if st.button("💬 말동무와 대화", key="mode_chat", use_container_width=True):
+        st.session_state.app_mode = "chat"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+with mcol2:
+    sb_cls = "mode-btn mode-btn-active" if st.session_state.app_mode == "storybook" else "mode-btn mode-btn-inactive"
+    st.markdown(f'<div class="{sb_cls}">', unsafe_allow_html=True)
+    if st.button("📖 내 이야기 스토리북", key="mode_storybook", use_container_width=True):
+        st.session_state.app_mode = "storybook"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+st.divider()
+
+# ── 모드별 콘텐츠 ──────────────────────────────────────────
+if st.session_state.app_mode == "chat":
+    # ── 대화 히스토리 표시 ─────────────────────────────────────
+    for i, msg in enumerate(st.session_state.messages):
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            # ★음성: 새 메시지만 자동재생, 이미 재생된 건 수동(합창 방지)
+            if msg.get("audio"):
+                already_played = i in st.session_state.played_audio_indices
+                st.audio(
+                    msg["audio"],
+                    format="audio/mp3",
+                    autoplay=not already_played,
+                )
+                st.session_state.played_audio_indices.add(i)
+            if msg.get("hits"):
+                cat_label = CAT_LABEL.get(msg["category"], msg["category"])
+                with st.expander(f"🔎 참고 이야기 ({cat_label})", expanded=False):
+                    for h in msg["hits"]:
+                        st.markdown(
+                            f"- *(유사도 {h['score']:.3f})* `{h['label']}` {h['text'][:90]}"
+                        )
+
+    # ★UI개선: 예시 버튼 — 첫 화면엔 본문에 큰 버튼으로 전부 표시(카테고리 라벨 제거로 간소화)
+    #           대화 시작 후엔 작은 접기 패널로 숨겨 화면 정리
+    user_has_spoken = any(m["role"] == "user" for m in st.session_state.messages)
+
+    if not user_has_spoken:
+        st.markdown("#### 💬 이렇게 말씀해 보세요")
+        for ex in FLAT_EXAMPLES:
+            if st.button(ex, key=f"ex_{ex}", use_container_width=True):
+                st.session_state.prompt_input = ex
+        st.divider()
+    else:
+        with st.expander("💬 다른 말 걸어보기", expanded=False):
+            for ex in FLAT_EXAMPLES:
+                if st.button(ex, key=f"ex_{ex}", use_container_width=True):
+                    st.session_state.prompt_input = ex
+
+    # ── 입력 받기 (음성 + 텍스트) ──────────────────────────────
+    st.markdown("##### 🎤 말로 하시거나, 아래에 적어주세요")
+    # 마이크 버튼 가운데 정렬 — 기존 유지
+    _left, _center, _right = st.columns([1, 2, 1])
+    with _center:
+        audio = mic_recorder(
+            start_prompt="🎤 눌러서 말하기",
+            stop_prompt="⏹️ 멈추기",
+            just_once=True,
+            format="wav",
+            use_container_width=True,
+            key="mic",
+        )
+        # ★UI개선: st.chat_input(화면 맨 아래 고정) → st.form(마이크 바로 아래 배치)
+        # clear_on_submit=True: 제출 후 입력칸 자동 클리어, Enter키·버튼 모두 제출 처리
+        with st.form(key="text_form", clear_on_submit=True):
+            typed_raw = st.text_input(
+                "직접 입력",
+                placeholder="여기에 적어주세요...",
+                label_visibility="collapsed",
+            )
+            send_clicked = st.form_submit_button(
+                "📤 말 보내기",
+                use_container_width=True,
+                type="primary",
+            )
+
+    # ★UI개선: form 제출값을 typed_input으로 추출 (기존 typed_input 변수명 유지)
+    typed_input = typed_raw.strip() if send_clicked and typed_raw.strip() else None
+
+    # ★음성: 입력 소스 결정 — 녹음이 있으면 STT로 텍스트화, 없으면 타이핑 사용
+    user_input = None
+    if st.session_state.prompt_input:
+        user_input = st.session_state.prompt_input
+        st.session_state.prompt_input = None
+    elif audio and audio.get("id") != st.session_state.last_audio_id:
+        st.session_state.last_audio_id = audio["id"]
+        with st.spinner("말씀을 듣고 있어요..."):
+            try:
+                user_input = voice.speech_to_text(audio["bytes"])
+            except Exception as e:
+                st.error(f"음성 인식에 실패했어요: {e}")
+                user_input = None
+    elif typed_input:
+        user_input = typed_input
+
+    # ── 입력 처리 (음성·텍스트 공통) ───────────────────────────
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.write(user_input)
+
+        # 분류 + 검색
+        with st.spinner("잠시만요..."):
+            result = retrieve_fn(user_input)
+
+        # 대화 히스토리 구성
+        _max = config.MAX_HISTORY_TURNS * 2
+        history = [
+            {"role": m["role"], "content": m["content"]}
+            for m in st.session_state.messages[:-1]
+            if m["content"] != GREETING
+        ][-_max:]
+
+        # 스트리밍 생성
+        with st.chat_message("assistant"):
+            response_stream = generator.generate_stream(
+                user_input, result["hits"], result["category"], history
+            )
+            answer = st.write_stream(response_stream)
+
+            # ★음성: 답변을 음성으로 변환해서 재생
+            audio_bytes = None
+            with st.spinner("목소리로 만들고 있어요..."):
+                try:
+                    audio_bytes = voice.text_to_speech(answer)
+                except Exception as e:
+                    st.warning(f"음성 변환은 건너뛰었어요: {e}")
+            if audio_bytes:
+                st.audio(audio_bytes, format="audio/mp3", autoplay=True)
+
+            cat_label = CAT_LABEL.get(result["category"], result["category"])
             with st.expander(f"🔎 참고 이야기 ({cat_label})", expanded=False):
-                for h in msg["hits"]:
+                for h in result["hits"]:
                     st.markdown(
                         f"- *(유사도 {h['score']:.3f})* `{h['label']}` {h['text'][:90]}"
                     )
 
-# ★UI개선: 예시 버튼 — 첫 화면엔 본문에 큰 버튼으로 전부 표시(카테고리 라벨 제거로 간소화)
-#           대화 시작 후엔 작은 접기 패널로 숨겨 화면 정리
-user_has_spoken = any(m["role"] == "user" for m in st.session_state.messages)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": answer,
+            "category": result["category"],
+            "hits": result["hits"],
+            "audio": audio_bytes,  # ★음성: 다시 그릴 때 재생되도록 저장
+        })
+        st.session_state.last_category = result["category"]  # ★스토리북: 카테고리 기억
+        st.rerun()
 
-if not user_has_spoken:
-    st.markdown("#### 💬 이렇게 말씀해 보세요")
-    for ex in FLAT_EXAMPLES:
-        if st.button(ex, key=f"ex_{ex}", use_container_width=True):
-            st.session_state.prompt_input = ex
-    st.divider()
-else:
-    with st.expander("💬 다른 말 걸어보기", expanded=False):
-        for ex in FLAT_EXAMPLES:
-            if st.button(ex, key=f"ex_{ex}", use_container_width=True):
-                st.session_state.prompt_input = ex
-
-# ── 입력 받기 (음성 + 텍스트) ──────────────────────────────
-st.markdown("##### 🎤 말로 하시거나, 아래에 적어주세요")
-# 마이크 버튼 가운데 정렬 — 기존 유지
-_left, _center, _right = st.columns([1, 2, 1])
-with _center:
-    audio = mic_recorder(
-        start_prompt="🎤 눌러서 말하기",
-        stop_prompt="⏹️ 멈추기",
-        just_once=True,
-        format="wav",
-        use_container_width=True,
-        key="mic",
-    )
-    # ★UI개선: st.chat_input(화면 맨 아래 고정) → st.form(마이크 바로 아래 배치)
-    # clear_on_submit=True: 제출 후 입력칸 자동 클리어, Enter키·버튼 모두 제출 처리
-    with st.form(key="text_form", clear_on_submit=True):
-        typed_raw = st.text_input(
-            "직접 입력",
-            placeholder="여기에 적어주세요...",
-            label_visibility="collapsed",
-        )
-        send_clicked = st.form_submit_button(
-            "📤 말 보내기",
-            use_container_width=True,
-            type="primary",
-        )
-
-# ★UI개선: form 제출값을 typed_input으로 추출 (기존 typed_input 변수명 유지)
-typed_input = typed_raw.strip() if send_clicked and typed_raw.strip() else None
-
-# ★음성: 입력 소스 결정 — 녹음이 있으면 STT로 텍스트화, 없으면 타이핑 사용
-user_input = None
-if st.session_state.prompt_input:
-    user_input = st.session_state.prompt_input
-    st.session_state.prompt_input = None
-elif audio and audio.get("id") != st.session_state.last_audio_id:
-    st.session_state.last_audio_id = audio["id"]
-    with st.spinner("말씀을 듣고 있어요..."):
-        try:
-            user_input = voice.speech_to_text(audio["bytes"])
-        except Exception as e:
-            st.error(f"음성 인식에 실패했어요: {e}")
-            user_input = None
-elif typed_input:
-    user_input = typed_input
-
-# ── 입력 처리 (음성·텍스트 공통) ───────────────────────────
-if user_input:
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.write(user_input)
-
-    # 분류 + 검색
-    with st.spinner("잠시만요..."):
-        result = retrieve_fn(user_input)
-
-    # 대화 히스토리 구성
-    _max = config.MAX_HISTORY_TURNS * 2
-    history = [
-        {"role": m["role"], "content": m["content"]}
-        for m in st.session_state.messages[:-1]
-        if m["content"] != GREETING
-    ][-_max:]
-
-    # 스트리밍 생성
-    with st.chat_message("assistant"):
-        response_stream = generator.generate_stream(
-            user_input, result["hits"], result["category"], history
-        )
-        answer = st.write_stream(response_stream)
-
-        # ★음성: 답변을 음성으로 변환해서 재생
-        audio_bytes = None
-        with st.spinner("목소리로 만들고 있어요..."):
-            try:
-                audio_bytes = voice.text_to_speech(answer)
-            except Exception as e:
-                st.warning(f"음성 변환은 건너뛰었어요: {e}")
-        if audio_bytes:
-            st.audio(audio_bytes, format="audio/mp3", autoplay=True)
-
-        cat_label = CAT_LABEL.get(result["category"], result["category"])
-        with st.expander(f"🔎 참고 이야기 ({cat_label})", expanded=False):
-            for h in result["hits"]:
-                st.markdown(
-                    f"- *(유사도 {h['score']:.3f})* `{h['label']}` {h['text'][:90]}"
-                )
-
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": answer,
-        "category": result["category"],
-        "hits": result["hits"],
-        "audio": audio_bytes,  # ★음성: 다시 그릴 때 재생되도록 저장
-    })
-    st.rerun()
+elif st.session_state.app_mode == "storybook":
+    render_storybook_mode()  # ★스토리북: "준비 중" placeholder → 실제 기능
 
 # ★UI개선: 사이드바 간소화 — 예시 목록 제거(본문 버튼으로 이동), 초기화·출처만 유지
 with st.sidebar:
@@ -369,8 +441,10 @@ with st.sidebar:
 
     if st.button("🔄 대화 초기화", use_container_width=True):
         st.session_state.messages = [{"role": "assistant", "content": GREETING}]
-        st.session_state.last_audio_id = None  # ★음성
+        st.session_state.last_audio_id = None
         st.session_state.prompt_input = None
+        st.session_state.storybook = None
+        st.session_state.played_audio_indices = set()  # ← 추가
         st.rerun()
 
     st.divider()

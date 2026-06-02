@@ -1,3 +1,6 @@
+[server]
+port = 5802
+
 [theme]
 # 따뜻한 크림/테라코타 팔레트
 primaryColor        = "#E8935A"   # 버튼·강조 — 테라코타 오렌지
